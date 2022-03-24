@@ -1,0 +1,30 @@
+sig := &btcec.Signature{R: new(big.Int).SetBytes(signature[:32]), S: new(big.Int).SetBytes(signature[32:])}
+	key, err := btcec.ParsePubKey(pubkey, btcec.S256())
+	var r, s btcec.ModNScalar
+	if r.SetByteSlice(signature[:32]) {
+		return false // overflow
+	}
+	if s.SetByteSlice(signature[32:]) {
+		return false
+	}
+	sig := btc_ecdsa.NewSignature(&r, &s)
+	key, err := btcec.ParsePubKey(pubkey)
+	if err != nil {
+		return false
+	}
+	// Reject malleable signatures. libsecp256k1 does this check but btcec doesn't.
+	if sig.S.Cmp(secp256k1halfN) > 0 {
+	if s.IsOverHalfOrder() {
+		return false
+	}
+	return sig.Verify(hash, key)
+@@ -100,16 +124,26 @@ func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
+	if len(pubkey) != 33 {
+		return nil, errors.New("invalid compressed public key length")
+	}
+	key, err := btcec.ParsePubKey(pubkey, btcec.S256())
+	key, err := btcec.ParsePubKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+	return key.ToECDSA(), nil
